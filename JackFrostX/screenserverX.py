@@ -4,6 +4,7 @@ import threading
 from .jfAPI import (
     screenshot,
 )
+from .config import END_FLAG, TCP_LENGTH
 from typing import Optional
 
 class ScreenServer:
@@ -26,10 +27,12 @@ class ScreenServer:
 
     def __screenshot_send(self, sk: socket.socket):
         while True:
-            time.sleep(1)
+            time.sleep(1/30)
             frame = screenshot(self.screensize)
-            sk.send(frame)
-            print('send len' + str(len(frame)))
+            for i in range(0, len(frame), TCP_LENGTH):
+                sk.send(frame[i : i + TCP_LENGTH])
+            sk.send(END_FLAG)
+            
 
     def run_normal(self):
         self.__socket.bind((self.host, self.port))

@@ -4,12 +4,14 @@ from tkinter import *
 from io import BytesIO
 from PIL import ImageTk, Image
 from typing import Optional
+from .config import END_FLAG
+
 
 class ScreenClient:
     def __init__(
         self, 
         addr: tuple[str, int] = ('127.0.0.1', 27013),
-        buffersize: int = 2**20,
+        buffersize: int = 2**17,
         screensize: tuple[int, int] = (1440, 810),
         prick_addr: Optional[tuple[str, int]] = None,
         ) -> None:
@@ -35,25 +37,31 @@ class ScreenClient:
         
 
     def __screenshot_receive(self):
+        nx = -len(END_FLAG)
+        tmp = b''
         while True:
             data = self.__socket.recv(self.buffersize)
-            self.__pool.append(data)
+            tmp += data
+            if END_FLAG in tmp:
+                lst = tmp.split(END_FLAG)
+                for i, fragment in enumerate(lst):
+                    if i < len(lst) - 1:
+                        self.__pool.append(fragment)
+                tmp = b'' + lst[-1]
+
     
     def __play(self):
         self.__lebel.pack()
         counter = 0
         while True:
             if len(self.__pool) > 0:
-                print('lenpool = ' + str(len(self.__pool)))
                 frame = self.__pool.pop(0)
-                print('framelen = ' + str(len(frame)))
                 try:
                     img = ImageTk.PhotoImage(Image.open(BytesIO(frame)).resize(self.screensize))
                     self.__lebel.configure(image=img)
                     self.temp = img
                 except:
                     counter += 1
-                    print('err >>> ' + str(counter))
     
     def run_normal(self):
         self.__socket.connect((self.host, self.port))
